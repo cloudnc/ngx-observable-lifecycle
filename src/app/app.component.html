@@ -4,3 +4,8 @@
 <button (click)="showChildComponent = !showChildComponent">
   Toggle child component
 </button>
+<hr />
+<app-lib-example *ngIf="showLibExampleComponent"></app-lib-example>
+<button (click)="showLibExampleComponent = !showLibExampleComponent">
+  Toggle lib example component
+</button>

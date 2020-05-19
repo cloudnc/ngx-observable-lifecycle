@@ -10,19 +10,14 @@ const NG_COMPONENT_DEF = 'ɵcmp';
 const NG_DIRECTIVE_DEF = 'ɵdir';
 
 const hookProp: unique symbol = Symbol('ngx-observable-lifecycle-hooks');
+
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
-export type DecoratedDirective<T> = Writeable<
-  DirectiveDef<T> | ComponentDef<T>
-> &
+
+export type DecoratedDirective<T> = Writeable<DirectiveDef<T> | ComponentDef<T>> &
   Record<typeof hookProp, DecoratedHooks<any>>;
 
-function getDef<T>(
-  type: DirectiveType<T> | ComponentType<T>
-): DecoratedDirective<T> {
-  return (
-    (type as ComponentType<T>)[NG_COMPONENT_DEF] ||
-    (type as DirectiveType<T>)[NG_DIRECTIVE_DEF]
-  );
+function getLinkInfo<T>(type: DirectiveType<T> | ComponentType<T>): DecoratedDirective<T> {
+  return (type as ComponentType<T>)[NG_COMPONENT_DEF] || (type as DirectiveType<T>)[NG_DIRECTIVE_DEF];
 }
 
 type AngularLifecycleHooks =
@@ -58,33 +53,27 @@ export type DecoratedHooks<T extends DecorateHookOptions> = {
 /**
  * Library authors should use this to create their own decorators
  */
-export function decorateObservableLifecycle(
-  target: any,
-  options: DecorateHookOptions
-): void {
-  const def = getDef(target);
+export function decorateObservableLifecycle(target: any, options: DecorateHookOptions): void {
+  const linkInfo = getLinkInfo(target);
 
-  def[hookProp] = (Object.keys(options) as Array<keyof Hooks<any>>).reduce(
-    (hooksMap, hook) => {
-      if (hooksMap[hook]) {
-        return hooksMap;
-      }
-
-      const sub = new Subject<void>();
-
-      hooksMap[hook] = sub.asObservable();
-
-      const originalHook = def[hook];
-      def[hook] = function () {
-        originalHook?.call(this);
-
-        sub.next();
-      };
-
+  linkInfo[hookProp] = (Object.keys(options) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
+    if (hooksMap[hook]) {
       return hooksMap;
-    },
-    def[hookProp] ?? ({} as DecoratedHooks<any>)
-  );
+    }
+
+    const sub = new Subject<void>();
+
+    hooksMap[hook] = sub.asObservable();
+
+    const originalHook = linkInfo[hook];
+    linkInfo[hook] = function () {
+      originalHook?.call(this);
+
+      sub.next();
+    };
+
+    return hooksMap;
+  }, linkInfo[hookProp] ?? ({} as DecoratedHooks<any>));
 }
 
 export interface GetLifecycleHooksOptions {
@@ -96,9 +85,9 @@ export interface GetLifecycleHooksOptions {
  */
 export function getLifecycleHooks<T extends DecorateHookOptions = {}>(
   target: any,
-  { missingDecoratorError }: GetLifecycleHooksOptions
+  { missingDecoratorError }: GetLifecycleHooksOptions,
 ): DecoratedHooks<T> {
-  const hooks = getDef(target.constructor)[hookProp];
+  const hooks = getLinkInfo(target.constructor)[hookProp];
 
   if (!hooks) {
     throw missingDecoratorError;
@@ -107,18 +96,14 @@ export function getLifecycleHooks<T extends DecorateHookOptions = {}>(
   return hooks;
 }
 
-export function getObservableLifecycle<
-  T extends DecorateHookOptions = AllHookOptions
->(target: any): DecoratedHooks<T> {
+export function getObservableLifecycle<T extends DecorateHookOptions = AllHookOptions>(target: any): DecoratedHooks<T> {
   return getLifecycleHooks(target, {
     missingDecoratorError: new Error(
-      'You must decorate the component or interface with @ObservableLifecycle for getObservableLifecycle to be able to function!'
+      'You must decorate the component or interface with @ObservableLifecycle for getObservableLifecycle to be able to function!',
     ),
   });
 }
 
-export function ObservableLifecycle(
-  options: DecorateHookOptions = allHooks
-): ClassDecorator {
-  return (target) => decorateObservableLifecycle(target, options);
+export function ObservableLifecycle(options: DecorateHookOptions = allHooks): ClassDecorator {
+  return target => decorateObservableLifecycle(target, options);
 }

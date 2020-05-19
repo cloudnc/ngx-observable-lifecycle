@@ -10,4 +10,5 @@ export class AppComponent {
 
   inputValue = 0;
   showChildComponent = true;
+  showLibExampleComponent = false;
 }

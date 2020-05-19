@@ -10,9 +10,7 @@ describe('workspace-project App', () => {
 
   it('should display welcome message', () => {
     page.navigateTo();
-    expect(page.getTitleText()).toEqual(
-      'ngx-observable-lifecycle app is running!'
-    );
+    expect(page.getTitleText()).toEqual('ngx-observable-lifecycle app is running!');
   });
 
   afterEach(async () => {
@@ -21,7 +19,7 @@ describe('workspace-project App', () => {
     expect(logs).not.toContain(
       jasmine.objectContaining({
         level: logging.Level.SEVERE,
-      } as logging.Entry)
+      } as logging.Entry),
     );
   });
 });

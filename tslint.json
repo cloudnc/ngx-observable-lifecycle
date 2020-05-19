@@ -6,6 +6,7 @@
     },
     "array-type": false,
     "arrow-return-shorthand": true,
+    "only-arrow-functions": false,
     "curly": true,
     "deprecation": {
       "severity": "warning"
@@ -26,12 +27,7 @@
     "member-ordering": [
       true,
       {
-        "order": [
-          "static-field",
-          "instance-field",
-          "static-method",
-          "instance-method"
-        ]
+        "order": ["static-field", "instance-field", "static-method", "instance-method"]
       }
     ],
     "no-console": [true, "debug", "info", "time", "timeEnd", "trace"],
@@ -77,14 +73,7 @@
       "options": ["ban-keywords", "check-format", "allow-pascal-case"]
     },
     "whitespace": {
-      "options": [
-        "check-branch",
-        "check-decl",
-        "check-operator",
-        "check-separator",
-        "check-type",
-        "check-typecast"
-      ]
+      "options": ["check-branch", "check-decl", "check-operator", "check-separator", "check-type", "check-typecast"]
     },
     "no-conflicting-lifecycle": true,
     "no-host-metadata-property": true,
