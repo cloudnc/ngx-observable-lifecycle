@@ -1,6 +1,6 @@
 {
   "name": "ngx-observable-lifecycle",
-  "version": "0.0.0",
+  "version": "0.0.0-development",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -9,7 +9,8 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "build-lib": "ng build ngx-observable-lifecycle --prod",
-    "postinstall": "ngcc"
+    "postinstall": "ngcc",
+    "semantic-release": "semantic-release"
   },
   "private": true,
   "dependencies": {
@@ -31,9 +32,9 @@
     "@angular/cli": "~9.1.4",
     "@angular/compiler-cli": "~9.1.4",
     "@angular/language-service": "~9.1.4",
-    "@types/node": "^12.11.1",
     "@types/jasmine": "~3.5.0",
     "@types/jasminewd2": "~2.0.3",
+    "@types/node": "^12.11.1",
     "codelyzer": "^5.1.2",
     "jasmine-core": "~3.5.0",
     "jasmine-spec-reporter": "~4.2.1",
@@ -43,9 +44,15 @@
     "karma-jasmine": "~3.0.1",
     "karma-jasmine-html-reporter": "^1.4.2",
     "ng-packagr": "^9.0.0",
+    "prettier": "2.0.5",
     "protractor": "~5.4.3",
+    "semantic-release": "^17.0.7",
     "ts-node": "~8.3.0",
     "tslint": "~6.1.0",
     "typescript": "~3.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudnc/ngx-observable-lifecycle.git"
   }
 }
