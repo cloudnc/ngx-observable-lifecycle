@@ -59,11 +59,11 @@ export function decorateObservableLifecycle(target: any, options: DecorateHookOp
 
   const def = getDef(target);
 
-  if (def[hookProp]) {
-    return; // already decorated
-  }
-
   def[hookProp] = (Object.keys(options) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
+
+    if (hooksMap[hook]) {
+      return hooksMap;
+    }
 
     const sub = new Subject<void>()
 
@@ -77,7 +77,7 @@ export function decorateObservableLifecycle(target: any, options: DecorateHookOp
     };
 
     return hooksMap;
-  }, {} as DecoratedHooks<any>);
+  }, def[hookProp] ?? {} as DecoratedHooks<any>);
 
 }
 
