@@ -1,4 +1,6 @@
-<app-child-component *ngIf="showChildComponent" [input]="inputValue"></app-child-component>
-<hr>
+<app-child *ngIf="showChildComponent" [input]="inputValue"></app-child>
+<hr />
 <button (click)="inputValue = inputValue + 1">Increment inputValue</button>
-<button (click)="showChildComponent = !showChildComponent">Toggle child component</button>
+<button (click)="showChildComponent = !showChildComponent">
+  Toggle child component
+</button>
