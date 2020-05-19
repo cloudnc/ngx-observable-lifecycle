@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { getLifecycleHooks, ObservableLifecycle } from 'ngx-observable-lifecycle';
+import { getObservableLifecycle, ObservableLifecycle } from 'ngx-observable-lifecycle';
 import { take, takeUntil } from 'rxjs/operators';
 
 @ObservableLifecycle()
@@ -24,7 +24,7 @@ export class ChildComponentComponent {
       afterViewInit,
       afterViewChecked,
       onDestroy,
-    } = getLifecycleHooks(this);
+    } = getObservableLifecycle(this);
 
     onChanges.pipe(takeUntil(onDestroy)).subscribe(() => console.count('onChanges'));
     onInit.pipe(takeUntil(onDestroy)).subscribe(() => console.count('onInit'));
