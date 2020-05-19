@@ -1,27 +1,69 @@
 # NgxObservableLifecycle
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 9.1.4.
+[![npm version](https://badge.fury.io/js/ngx-observable-lifecycle.svg)](https://www.npmjs.com/package/ngx-observable-lifecycle)
+[![Build Status](https://travis-ci.org/cloudnc/ngx-observable-lifecycle.svg?branch=master)](https://travis-ci.org/cloudnc/ngx-observable-lifecycle)
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](https://commitizen.github.io/cz-cli/)
+[![License](https://img.shields.io/github/license/cloudnc/ngx-observable-lifecycle)](https://raw.githubusercontent.com/cloudnc/ngx-observable-lifecycle/master/LICENSE)
+![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/@angular/core)
+![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/rxjs)
 
-## Development server
+[![NPM](https://nodei.co/npm/ngx-observable-lifecycle.png?compact=true)](https://nodei.co/npm/ngx-observable-lifecycle/)
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+This library is current a work in progress,
+but here's the basics of how it will work:
 
-## Code scaffolding
+```ts
+// ./src/app/child/child.component.ts
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
+import {
+  getObservableLifecycle,
+  ObservableLifecycle,
+} from "ngx-observable-lifecycle";
+import { take, takeUntil } from "rxjs/operators";
 
-## Build
+@ObservableLifecycle()
+@Component({
+  selector: "app-child",
+  templateUrl: "./child.component.html",
+  styleUrls: ["./child.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class ChildComponent {
+  @Input() input: number;
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+  constructor() {
+    const {
+      onChanges,
+      onInit,
+      doCheck,
+      afterContentInit,
+      afterContentChecked,
+      afterViewInit,
+      afterViewChecked,
+      onDestroy,
+    } = getObservableLifecycle(this);
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+    onChanges
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("onChanges"));
+    onInit.pipe(takeUntil(onDestroy)).subscribe(() => console.count("onInit"));
+    doCheck
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("doCheck"));
+    afterContentInit
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("afterContentInit"));
+    afterContentChecked
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("afterContentChecked"));
+    afterViewInit
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("afterViewInit"));
+    afterViewChecked
+      .pipe(takeUntil(onDestroy))
+      .subscribe(() => console.count("afterViewChecked"));
+    onDestroy.pipe(take(1)).subscribe(() => console.count("onDestroy"));
+  }
+}
+```
