@@ -45,7 +45,7 @@ export const allHooks: AllHookOptions = {
 };
 
 export type DecoratedHooks<T extends DecorateHookOptions> = {
-  [P in keyof T]: T[P] extends true ? Observable<void> : never;
+  [P in keyof T]: T[P] extends true ? Observable<void> | undefined : never;
 };
 
 export interface DecorateObservableOptions {
@@ -78,17 +78,15 @@ export function decorateObservableLifecycle(
     hooksMap[hook] = hook$$.asObservable();
 
     const originalHook = linkInfo[hook];
-    // console.log(target.name, `registering hook`, hook, originalHook, hook$$.observers);
 
     linkInfo[hook] = function () {
       hook$$.next();
-      // console.log(target.name, `calling originalHook`, hook, originalHook, hook$$.observers);
       originalHook?.call(this);
     };
 
     completionCallbacks.push(() => {
-      // console.log(`completing hook`, hook, hook$$.observers);
-      hook$$.complete()
+      hook$$.complete();
+      hooksMap[hook] = undefined;
     });
 
     return hooksMap;
@@ -100,7 +98,6 @@ export function decorateObservableLifecycle(
 
       originalOnDestroy?.call(this);
       completionCallbacks.forEach(fn => fn());
-      // console.log(`calling originalOnDestroy`, originalOnDestroy);
     }
   }
 

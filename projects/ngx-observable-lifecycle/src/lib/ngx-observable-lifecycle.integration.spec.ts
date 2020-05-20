@@ -15,6 +15,7 @@ import { By } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { getObservableLifecycle, ObservableLifecycle } from './ngx-observable-lifecycle';
 import createSpyObj = jasmine.createSpyObj;
+import { CommonModule } from '@angular/common';
 
 fdescribe('integration', () => {
 
@@ -119,15 +120,15 @@ fdescribe('integration', () => {
     selector: 'host-component',
     template: `
       <h1>Host Component</h1>
-      <test-component *ngIf="testComponentVisible$ | async"></test-component>`,
-    changeDetection: ChangeDetectionStrategy.OnPush
+      <test-component *ngIf="testComponentVisible"></test-component>`,
+    // changeDetection: ChangeDetectionStrategy.OnPush
   })
   class HostComponent {
 
-    private testComponentVisible$ = new BehaviorSubject(false);
+    public testComponentVisible = false;
 
     public setTestComponentVisible(visible: boolean) {
-
+      this.testComponentVisible = visible;
     }
 
   }
@@ -137,6 +138,7 @@ fdescribe('integration', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
+      imports: [CommonModule],
       declarations: [HostComponent, TestComponent],
     }).compileComponents();
 
@@ -194,25 +196,22 @@ fdescribe('integration', () => {
   });
 
   it('should observe the init lifecycle', () => {
-    // expect(onInit$Spy.next).not.toHaveBeenCalled();
+    expect(onInit$Spy.next).not.toHaveBeenCalled();
     expect(ngOnInitSpy).not.toHaveBeenCalled();
     component.setTestComponentVisible(true);
 
     fixture.detectChanges();
-    expect(fixture.debugElement.query(By.directive(TestComponent))).toBeDefined();
 
-    console.log(fixture.debugElement.nativeElement);
-
-    // debugger;
-    //
-    // // expect(onInit$Spy.next).toHaveBeenCalledTimes(1);
     expect(ngOnInitSpy).toHaveBeenCalledTimes(1)
-    // component.setTestComponentVisible(false);
-    // fixture.detectChanges();
-    // // expect(onInit$Spy.next).toHaveBeenCalledTimes(2);
-    // expect(ngOnInitSpy).toHaveBeenCalledTimes(1)
-    // component.setTestComponentVisible(true);
-    // fixture.detectChanges();
+    expect(onInit$Spy.next).toHaveBeenCalledTimes(1);
+    component.setTestComponentVisible(false);
+    fixture.detectChanges();
+    expect(ngOnInitSpy).toHaveBeenCalledTimes(1);
+    expect(onInit$Spy.next).toHaveBeenCalledTimes(1);
+    component.setTestComponentVisible(true);
+    fixture.detectChanges();
+    expect(ngOnInitSpy).toHaveBeenCalledTimes(2);
+    // expect(onInit$Spy.next).toHaveBeenCalledTimes(2);
 
   });
 
