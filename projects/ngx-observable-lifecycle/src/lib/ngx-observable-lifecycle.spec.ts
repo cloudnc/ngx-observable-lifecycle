@@ -1,41 +1,30 @@
-import {
-  AfterContentChecked,
-  AfterContentInit,
-  AfterViewChecked,
-  AfterViewInit,
-  Component,
-  Directive,
-  DoCheck,
-  OnChanges,
-  OnDestroy,
-  OnInit,
-  SimpleChanges,
-  ɵivyEnabled,
-} from '@angular/core';
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { Component, Directive, ɵComponentDef, ɵivyEnabled, ɵɵdefineComponent } from '@angular/core';
 import { isObservable } from 'rxjs';
 import { NG_COMPONENT_DEF, NG_DIRECTIVE_DEF } from './ivy-api';
 import {
   allHooks,
   AngularLifecycleHook,
+  DecoratedHooks,
   decorateObservableLifecycle,
-  getLifecycleHooks, getObservableLifecycle,
-  hookProp, ObservableLifecycle,
+  hooksPatched,
+  getLifecycleHooks,
+  GetLifecycleHooksOptions,
 } from './ngx-observable-lifecycle';
-import createSpyObj = jasmine.createSpyObj;
+
+const testErrors: GetLifecycleHooksOptions = {
+  missingDecoratorError: new Error('missingDecoratorError'),
+  incompatibleComponentError: new Error('incompatibleComponentError'),
+};
 
 describe('ngx-observable-lifecycle', () => {
-
   describe('ivy private hooks', () => {
-
     @Component({
       template: '',
     })
-    class TestComponent {
-    }
+    class TestComponent {}
 
     @Directive({
-      selector: 'testDirective',
+      selector: '[libTestDirective]',
     })
     class TestDirective {}
 
@@ -76,16 +65,30 @@ describe('ngx-observable-lifecycle', () => {
     });
   });
 
-  describe('decorateObservableLifecycle', () => {
+  describe('decorateObservableLifecycle & getLifecycleHooks', () => {
+    let hooks: DecoratedHooks<{
+      onDestroy: true;
+      doCheck: true;
+    }>;
+
+    let componentInstance: TestComponent;
 
     @Component({
       template: '',
     })
     class TestComponent {
+      static ɵcmp: ɵComponentDef<TestComponent> = ɵɵdefineComponent({
+        vars: 0,
+        decls: 0,
+        type: TestComponent,
+        selectors: [[]],
+        template: () => {},
+      });
+
+      static ɵfac = () => new TestComponent();
     }
 
     beforeEach(() => {
-
       decorateObservableLifecycle(TestComponent, {
         hooks: {
           onDestroy: true,
@@ -93,36 +96,63 @@ describe('ngx-observable-lifecycle', () => {
         },
         incompatibleComponentError: new Error('incompatibleComponentError'),
       });
+      componentInstance = TestComponent.ɵfac();
+      hooks = getLifecycleHooks(componentInstance, testErrors);
     });
 
     it('should throw if applied to a non-component', () => {
-      expect(() => decorateObservableLifecycle(class NotAComponent {}, {
+      expect(() =>
+        decorateObservableLifecycle(class NotAComponent {}, {
+          hooks: {
+            onDestroy: true,
+            doCheck: true,
+          },
+          incompatibleComponentError: new Error('incompatibleComponentError'),
+        }),
+      ).toThrowError('incompatibleComponentError');
+    });
+
+    it('should register that the decorator has been applied to the component factory', () => {
+      expect(TestComponent[NG_COMPONENT_DEF][hooksPatched]).toBeDefined();
+    });
+
+    it('should throw when the class is not a component', () => {
+      expect(() => getLifecycleHooks(new (class NotAComponent {})(), testErrors)).toThrowError(
+        'incompatibleComponentError',
+      );
+    });
+
+    it('should throw when the class is not decorated', () => {
+      @Component({
+        template: '',
+      })
+      class UndecoratedTestComponent {}
+
+      expect(() => getLifecycleHooks(new UndecoratedTestComponent(), testErrors)).toThrowError('missingDecoratorError');
+    });
+
+    it('should retrieve the hooks from a decorated class', () => {
+      @Component({
+        template: '',
+      })
+      class LocalTestComponent {}
+      decorateObservableLifecycle(LocalTestComponent, {
         hooks: {
-          onDestroy: true,
-          doCheck: true,
+          afterViewInit: true,
         },
         incompatibleComponentError: new Error('incompatibleComponentError'),
-      })).toThrowError('incompatibleComponentError')
-    })
+      });
 
-    it('should register a hook store against the component factory', () => {
-      expect(TestComponent[NG_COMPONENT_DEF][hookProp]).toBeDefined();
+      const { afterViewInit } = getLifecycleHooks(new LocalTestComponent(), testErrors);
+
+      expect(isObservable(afterViewInit)).toBe(true);
     });
 
-    it('should have created an observable for the onDestroy hook', () => {
-      expect(isObservable(TestComponent[NG_COMPONENT_DEF][hookProp].onDestroy)).toBe(true);
-    });
-
-    it('should not have created an observable for a hook that was not requested', () => {
-      expect(isObservable(TestComponent[NG_COMPONENT_DEF][hookProp].onInit)).toBe(false);
-    });
-
-    xit('should call the original method and the hook observer', () => {
+    it('should call the original method and the hook observer', () => {
       const observerSpy = jasmine.createSpy('onDestroy hook observer');
 
-      const hook = TestComponent[NG_COMPONENT_DEF][hookProp].onDestroy;
-      const sub = hook.subscribe(observerSpy);
-      TestComponent[NG_COMPONENT_DEF].onDestroy();
+      const sub = hooks.onDestroy.subscribe(observerSpy);
+      TestComponent.ɵcmp.onDestroy.call(componentInstance);
 
       expect(observerSpy).toHaveBeenCalledTimes(1);
       sub.unsubscribe();
@@ -131,88 +161,52 @@ describe('ngx-observable-lifecycle', () => {
     it('should complete hooks when the component is destroyed', () => {
       const observerSpy = jasmine.createSpy('doCheck hook complete observer');
 
-      const hook = TestComponent[NG_COMPONENT_DEF][hookProp].doCheck;
-      const sub = hook.subscribe({ complete: observerSpy });
-      TestComponent[NG_COMPONENT_DEF].doCheck();
-      TestComponent[NG_COMPONENT_DEF].onDestroy();
+      const sub = hooks.doCheck.subscribe({ complete: observerSpy });
+      TestComponent.ɵcmp.doCheck.call(componentInstance);
+      TestComponent.ɵcmp.onDestroy.call(componentInstance);
 
       expect(observerSpy).toHaveBeenCalledTimes(1);
       sub.unsubscribe();
     });
 
-    it('should be able to be decorated twice, without triggering multiple emissions', () => {
-      decorateObservableLifecycle(TestComponent, {
-        hooks: {
-          afterViewInit: true,
-        },
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      });
-      decorateObservableLifecycle(TestComponent, {
-        hooks: {
-          afterViewInit: true,
-        },
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      });
+    it('should be able to be observed multiple times without triggering multiple emissions', () => {
+      const firstObserver = jasmine.createSpy('doCheck firstObserver');
+      const secondObserver = jasmine.createSpy('doCheck secondObserver');
 
-      const observerSpy = jasmine.createSpy('doCheck hook observer');
+      const sub = hooks.doCheck.subscribe(firstObserver);
+      const { doCheck } = getLifecycleHooks(componentInstance, testErrors);
 
-      const hook = TestComponent[NG_COMPONENT_DEF][hookProp].afterViewInit;
-      const sub = hook.subscribe(observerSpy);
-      TestComponent[NG_COMPONENT_DEF].afterViewInit();
+      sub.add(doCheck.subscribe(secondObserver));
 
-      expect(observerSpy).toHaveBeenCalledTimes(1);
+      TestComponent.ɵcmp.doCheck.call(componentInstance);
+
+      expect(firstObserver).toHaveBeenCalledTimes(1);
+      expect(secondObserver).toHaveBeenCalledTimes(1);
       sub.unsubscribe();
+    });
 
+    it('should be able to be decorated multiple times, without triggering multiple emissions', () => {
+      decorateObservableLifecycle(TestComponent, {
+        hooks: {
+          afterViewInit: true,
+        },
+        incompatibleComponentError: new Error('incompatibleComponentError'),
+      });
+
+      const doCheckSpy = jasmine.createSpy('doCheckSpy');
+      const afterViewInitSpy = jasmine.createSpy('afterViewInitSpy');
+
+      const { afterViewInit } = getLifecycleHooks(componentInstance, testErrors);
+      const { doCheck } = hooks;
+
+      const sub = doCheck.subscribe(doCheckSpy);
+      sub.add(afterViewInit.subscribe(afterViewInitSpy));
+      TestComponent.ɵcmp.doCheck.call(componentInstance);
+      TestComponent.ɵcmp.afterViewInit.call(componentInstance);
+
+      expect(doCheckSpy).toHaveBeenCalledTimes(1);
+      expect(afterViewInitSpy).toHaveBeenCalledTimes(1);
+      sub.unsubscribe();
     });
   });
-
-  describe('getLifecycleHooks', () => {
-
-
-    it('should throw when the class is not a component', () => {
-
-      expect(() => getLifecycleHooks(new class NotAComponent {}, {
-        missingDecoratorError: new Error('missingDecoratorError'),
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      })).toThrowError('incompatibleComponentError')
-    })
-
-    it('should throw when the class is not decorated', () => {
-
-
-      @Component({
-        template: '',
-      })
-      class TestComponent {
-      }
-
-      expect(() => getLifecycleHooks(new TestComponent, {
-        missingDecoratorError: new Error('missingDecoratorError'),
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      })).toThrowError('missingDecoratorError')
-    })
-
-    it('should retrieve the hooks from a decorated class', () => {
-
-      @Component({
-        template: '',
-      })
-      class TestComponent {
-      }
-      decorateObservableLifecycle(TestComponent, {
-        hooks: {
-          afterViewInit: true,
-        },
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      });
-
-      const {afterViewInit} = getLifecycleHooks(new TestComponent, {
-        missingDecoratorError: new Error('missingDecoratorError'),
-        incompatibleComponentError: new Error('incompatibleComponentError'),
-      })
-
-      expect(isObservable(afterViewInit)).toBe(true);
-    })
-
-  })
 });

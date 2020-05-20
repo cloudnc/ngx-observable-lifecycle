@@ -27,7 +27,7 @@ script:
   - yarn prettier:check
   - yarn readme:check
   # tests
-  #  - yarn lib:test:ci
+  - yarn lib:test:ci
   # build
   - yarn lib:build:prod
   # prep deploy

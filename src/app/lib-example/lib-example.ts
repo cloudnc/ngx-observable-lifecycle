@@ -6,12 +6,10 @@ export function AutomaticUnsubscribe(): ClassDecorator {
   return function (target) {
     decorateObservableLifecycle(target, {
       hooks: {
-      onDestroy: true,
-    },
-      incompatibleComponentError: new Error(
-        `You must use @AutomaticUnsubscribe with a directive or component.`,
-      ),
-  });
+        onDestroy: true,
+      },
+      incompatibleComponentError: new Error(`You must use @AutomaticUnsubscribe with a directive or component.`),
+    });
   };
 }
 

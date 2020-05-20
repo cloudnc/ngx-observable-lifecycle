@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import {
   AfterContentChecked,
   AfterContentInit,
@@ -10,20 +11,16 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
-import { async, ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { BehaviorSubject } from 'rxjs';
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { getObservableLifecycle, ObservableLifecycle } from './ngx-observable-lifecycle';
 import createSpyObj = jasmine.createSpyObj;
-import { CommonModule } from '@angular/common';
 
-fdescribe('integration', () => {
-
+describe('integration', () => {
   type ObserverSpy = {
     next: jasmine.Spy;
     complete: jasmine.Spy;
     error: jasmine.Spy;
-  }
+  };
 
   let ngAfterContentCheckedSpy: jasmine.Spy;
   let ngAfterContentInitSpy: jasmine.Spy;
@@ -43,11 +40,12 @@ fdescribe('integration', () => {
   let afterViewChecked$Spy: ObserverSpy;
   let onDestroy$Spy: ObserverSpy;
 
+  // tslint:disable:no-conflicting-lifecycle
   @ObservableLifecycle()
   @Component({
-    selector: 'test-component',
+    selector: 'lib-test-component',
     template: 'test-component',
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
   })
   class TestComponent
     implements
@@ -103,7 +101,6 @@ fdescribe('integration', () => {
         onDestroy,
       } = getObservableLifecycle(this);
 
-
       onChanges.subscribe(onChanges$Spy);
       onInit.subscribe(onInit$Spy);
       doCheck.subscribe(doCheck$Spy);
@@ -112,25 +109,22 @@ fdescribe('integration', () => {
       afterViewInit.subscribe(afterViewInit$Spy);
       afterViewChecked.subscribe(afterViewChecked$Spy);
       onDestroy.subscribe(onDestroy$Spy);
-
     }
   }
 
   @Component({
-    selector: 'host-component',
+    selector: 'lib-host-component',
     template: `
       <h1>Host Component</h1>
-      <test-component *ngIf="testComponentVisible"></test-component>`,
-    // changeDetection: ChangeDetectionStrategy.OnPush
+      <lib-test-component *ngIf="testComponentVisible"></lib-test-component>
+    `,
   })
   class HostComponent {
-
     public testComponentVisible = false;
 
     public setTestComponentVisible(visible: boolean) {
       this.testComponentVisible = visible;
     }
-
   }
 
   let component: HostComponent;
@@ -141,8 +135,6 @@ fdescribe('integration', () => {
       imports: [CommonModule],
       declarations: [HostComponent, TestComponent],
     }).compileComponents();
-
-
   }));
 
   beforeEach(() => {
@@ -202,7 +194,7 @@ fdescribe('integration', () => {
 
     fixture.detectChanges();
 
-    expect(ngOnInitSpy).toHaveBeenCalledTimes(1)
+    expect(ngOnInitSpy).toHaveBeenCalledTimes(1);
     expect(onInit$Spy.next).toHaveBeenCalledTimes(1);
     component.setTestComponentVisible(false);
     fixture.detectChanges();
@@ -211,8 +203,6 @@ fdescribe('integration', () => {
     component.setTestComponentVisible(true);
     fixture.detectChanges();
     expect(ngOnInitSpy).toHaveBeenCalledTimes(2);
-    // expect(onInit$Spy.next).toHaveBeenCalledTimes(2);
-
+    expect(onInit$Spy.next).toHaveBeenCalledTimes(2);
   });
-
-})
+});

@@ -8,13 +8,14 @@ import { Observable, Subject } from 'rxjs';
 import { NG_COMPONENT_DEF, NG_DIRECTIVE_DEF } from './ivy-api';
 
 export const hookProp: unique symbol = Symbol('ngx-observable-lifecycle-hooks');
+export const hooksPatched: unique symbol = Symbol('ngx-observable-lifecycle-hooks-decorator');
 
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-export type DecoratedDirective<T> = Writeable<DirectiveDef<T> | ComponentDef<T>> &
-  Record<typeof hookProp, DecoratedHooks<any>>;
+export type IvyDirective<T> = Writeable<DirectiveDef<T> | ComponentDef<T>>;
+export type DecoratedDirective<T, U> = IvyDirective<T> & { [hooksPatched]: HooksType<U, boolean> };
 
-function getLinkInfo<T>(type: DirectiveType<T> | ComponentType<T>): DecoratedDirective<T> {
+function getLinkInfo<T, U>(type: DirectiveType<T> | ComponentType<T>): DecoratedDirective<T, U> {
   return (type as ComponentType<T>)[NG_COMPONENT_DEF] || (type as DirectiveType<T>)[NG_DIRECTIVE_DEF];
 }
 
@@ -28,7 +29,7 @@ export type AngularLifecycleHook =
   | 'afterViewChecked'
   | 'onDestroy';
 
-type Hooks<T> = Pick<DecoratedDirective<T>, AngularLifecycleHook>;
+type Hooks<T> = Pick<IvyDirective<T>, AngularLifecycleHook>;
 
 type AllHookOptions = Record<keyof Hooks<any>, true>;
 type DecorateHookOptions = Partial<AllHookOptions>;
@@ -44,63 +45,75 @@ export const allHooks: AllHookOptions = {
   onDestroy: true,
 };
 
-export type DecoratedHooks<T extends DecorateHookOptions> = {
-  [P in keyof T]: T[P] extends true ? Observable<void> | undefined : never;
+export type HooksType<T extends DecorateHookOptions, U> = {
+  [P in keyof T]: T[P] extends true ? U : never;
 };
+
+export type DecoratedHooks<T> = HooksType<T, Observable<void>>;
+export type DecoratedHooksSub<T> = HooksType<T, Subject<void>>;
 
 export interface DecorateObservableOptions {
   hooks: DecorateHookOptions;
   incompatibleComponentError: Error;
 }
 
+type DecoratedClassInstance<T> = { [hookProp]: DecoratedHooksSub<T> };
+
+function getSubjectForHook<T>(classInstance: DecoratedClassInstance<T>, hook: keyof T): Subject<void> {
+  if (!classInstance[hookProp]) {
+    classInstance[hookProp] = {} as DecoratedClassInstance<T>[typeof hookProp];
+  }
+
+  const hooks: DecoratedHooksSub<T> = classInstance[hookProp];
+
+  if (!hooks[hook]) {
+    (hooks[hook] as Subject<void>) = new Subject<void>();
+  }
+
+  return hooks[hook];
+}
+
+function closeHook<T>(classInstance: DecoratedClassInstance<T>, hook: keyof T): void {
+  classInstance[hookProp][hook]?.complete();
+  delete classInstance[hookProp][hook];
+}
+
 /**
  * Library authors should use this to create their own decorators
  */
-export function decorateObservableLifecycle(
-  target: any,
+export function decorateObservableLifecycle<T, U>(
+  target: T,
   { hooks, incompatibleComponentError }: DecorateObservableOptions,
 ): void {
-  const linkInfo = getLinkInfo(target);
+  const linkInfo = getLinkInfo<T, U>(target as any);
 
   if (!linkInfo) {
     throw incompatibleComponentError;
   }
 
-  const completionCallbacks: Array<() => void> = [];
-
-  linkInfo[hookProp] = (Object.keys(hooks) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
-    if (hooksMap[hook]) {
-      return hooksMap;
+  linkInfo[hooksPatched] = (Object.keys(hooks) as Array<keyof typeof hooks>).reduce((patched, hook) => {
+    // @ts-ignore
+    if (patched[hook]) {
+      return patched;
     }
-
-    const hook$$ = new Subject<void>();
-
-    hooksMap[hook] = hook$$.asObservable();
 
     const originalHook = linkInfo[hook];
 
-    linkInfo[hook] = function () {
-      hook$$.next();
+    linkInfo[hook] = function (this: DecoratedClassInstance<any>) {
       originalHook?.call(this);
+      getSubjectForHook(this, hook).next();
     };
 
-    completionCallbacks.push(() => {
-      hook$$.complete();
-      hooksMap[hook] = undefined;
-    });
-
-    return hooksMap;
-  }, linkInfo[hookProp] ?? ({} as DecoratedHooks<any>));
-
-  if (completionCallbacks.length) {
     const originalOnDestroy = linkInfo.onDestroy;
-    linkInfo.onDestroy = function() {
-
+    linkInfo.onDestroy = function (this: DecoratedClassInstance<any>) {
       originalOnDestroy?.call(this);
-      completionCallbacks.forEach(fn => fn());
-    }
-  }
+      closeHook(this, hook);
+    };
 
+    // @ts-ignore
+    patched[hook] = true;
+    return patched;
+  }, linkInfo[hooksPatched] ?? ({} as any));
 }
 
 export interface GetLifecycleHooksOptions {
@@ -112,20 +125,24 @@ export interface GetLifecycleHooksOptions {
  * Library authors should use this to create their own lifecycle-aware functionality
  */
 export function getLifecycleHooks<T extends DecorateHookOptions = {}>(
-  target: any,
+  classInstance: any,
   { incompatibleComponentError, missingDecoratorError }: GetLifecycleHooksOptions,
 ): DecoratedHooks<T> {
-  const linkInfo = getLinkInfo(target.constructor);
+  const linkInfo = getLinkInfo(classInstance.constructor);
+
   if (!linkInfo) {
     throw incompatibleComponentError;
   }
-  const hooks = linkInfo[hookProp];
 
-  if (!hooks) {
+  if (!linkInfo[hooksPatched]) {
     throw missingDecoratorError;
   }
 
-  return hooks;
+  return new Proxy({} as DecoratedHooks<T>, {
+    get(target: DecoratedHooks<T>, p: keyof T): Observable<void> {
+      return getSubjectForHook(classInstance, p).asObservable();
+    },
+  });
 }
 
 export function getObservableLifecycle<T extends DecorateHookOptions = AllHookOptions>(target: any): DecoratedHooks<T> {
