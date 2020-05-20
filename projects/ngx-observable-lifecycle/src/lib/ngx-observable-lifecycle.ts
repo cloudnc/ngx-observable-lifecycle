@@ -5,11 +5,9 @@ import {
   ɵDirectiveType as DirectiveType,
 } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
+import { NG_COMPONENT_DEF, NG_DIRECTIVE_DEF } from './ivy-api';
 
-const NG_COMPONENT_DEF = 'ɵcmp';
-const NG_DIRECTIVE_DEF = 'ɵdir';
-
-const hookProp: unique symbol = Symbol('ngx-observable-lifecycle-hooks');
+export const hookProp: unique symbol = Symbol('ngx-observable-lifecycle-hooks');
 
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
@@ -20,7 +18,7 @@ function getLinkInfo<T>(type: DirectiveType<T> | ComponentType<T>): DecoratedDir
   return (type as ComponentType<T>)[NG_COMPONENT_DEF] || (type as DirectiveType<T>)[NG_DIRECTIVE_DEF];
 }
 
-type AngularLifecycleHooks =
+export type AngularLifecycleHook =
   | 'onChanges'
   | 'onInit'
   | 'doCheck'
@@ -30,12 +28,12 @@ type AngularLifecycleHooks =
   | 'afterViewChecked'
   | 'onDestroy';
 
-type Hooks<T> = Pick<DecoratedDirective<T>, AngularLifecycleHooks>;
+type Hooks<T> = Pick<DecoratedDirective<T>, AngularLifecycleHook>;
 
 type AllHookOptions = Record<keyof Hooks<any>, true>;
 type DecorateHookOptions = Partial<AllHookOptions>;
 
-const allHooks: AllHookOptions = {
+export const allHooks: AllHookOptions = {
   onChanges: true,
   onInit: true,
   doCheck: true,
@@ -56,20 +54,29 @@ export type DecoratedHooks<T extends DecorateHookOptions> = {
 export function decorateObservableLifecycle(target: any, options: DecorateHookOptions): void {
   const linkInfo = getLinkInfo(target);
 
+  console.log(`linkInfo[hookProp] `, linkInfo[hookProp]);
+
   linkInfo[hookProp] = (Object.keys(options) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
     if (hooksMap[hook]) {
+      console.log(`hook exists, returning`, hook);
       return hooksMap;
     }
 
-    const sub = new Subject<void>();
+    const hook$$ = new Subject<void>();
 
-    hooksMap[hook] = sub.asObservable();
+    hooksMap[hook] = hook$$.asObservable();
 
     const originalHook = linkInfo[hook];
     linkInfo[hook] = function () {
       originalHook?.call(this);
 
-      sub.next();
+      hook$$.next();
+    };
+
+    const originalDestroy = linkInfo.onDestroy;
+    linkInfo.onDestroy = function () {
+      originalDestroy?.call(this);
+      hook$$.complete();
     };
 
     return hooksMap;
