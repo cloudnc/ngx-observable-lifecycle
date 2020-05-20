@@ -21,7 +21,7 @@
     "lib:build:prod": "yarn run ng build --project ngx-observable-lifecycle --prod",
     "lib:build:watch": "yarn run lib:build:prod --watch",
     "lib:test:watch": "yarn run ng test --project ngx-observable-lifecycle",
-    "lib:test:ci": "yarn run ng test --project ngx-observable-lifecycle --watch false",
+    "lib:test:ci": "yarn run ng test --project ngx-observable-lifecycle --watch false --browsers ChromeHeadless",
     "------------------ RELEASE COMMANDS ------------------": "",
     "semantic-release": "semantic-release",
     "readme:build": "embedme README.md",
