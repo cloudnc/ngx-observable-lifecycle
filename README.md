@@ -66,10 +66,7 @@ lifecycle hooks we want to observe (in this case, just `onDestroy`)
 Lastly to implement the rxjs operator itself, we do the following:
 
  ```ts
- // ./src/app/lib-example/lib-example.ts#L13-L26
- 
-   };
- }
+ // ./src/app/lib-example/lib-example.ts#L16-L26
  
  export function automaticUnsubscribe<T>(component): (source: Observable<T>) => Observable<T> {
    const { onDestroy } = getLifecycleHooks(component, {
