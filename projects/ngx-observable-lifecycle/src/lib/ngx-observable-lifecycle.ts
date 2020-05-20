@@ -48,17 +48,28 @@ export type DecoratedHooks<T extends DecorateHookOptions> = {
   [P in keyof T]: T[P] extends true ? Observable<void> : never;
 };
 
+export interface DecorateObservableOptions {
+  hooks: DecorateHookOptions;
+  incompatibleComponentError: Error;
+}
+
 /**
  * Library authors should use this to create their own decorators
  */
-export function decorateObservableLifecycle(target: any, options: DecorateHookOptions): void {
+export function decorateObservableLifecycle(
+  target: any,
+  { hooks, incompatibleComponentError }: DecorateObservableOptions,
+): void {
   const linkInfo = getLinkInfo(target);
 
-  console.log(`linkInfo[hookProp] `, linkInfo[hookProp]);
+  if (!linkInfo) {
+    throw incompatibleComponentError;
+  }
 
-  linkInfo[hookProp] = (Object.keys(options) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
+  const completionCallbacks: Array<() => void> = [];
+
+  linkInfo[hookProp] = (Object.keys(hooks) as Array<keyof Hooks<any>>).reduce((hooksMap, hook) => {
     if (hooksMap[hook]) {
-      console.log(`hook exists, returning`, hook);
       return hooksMap;
     }
 
@@ -67,24 +78,37 @@ export function decorateObservableLifecycle(target: any, options: DecorateHookOp
     hooksMap[hook] = hook$$.asObservable();
 
     const originalHook = linkInfo[hook];
+    // console.log(target.name, `registering hook`, hook, originalHook, hook$$.observers);
+
     linkInfo[hook] = function () {
-      originalHook?.call(this);
-
       hook$$.next();
+      // console.log(target.name, `calling originalHook`, hook, originalHook, hook$$.observers);
+      originalHook?.call(this);
     };
 
-    const originalDestroy = linkInfo.onDestroy;
-    linkInfo.onDestroy = function () {
-      originalDestroy?.call(this);
-      hook$$.complete();
-    };
+    completionCallbacks.push(() => {
+      // console.log(`completing hook`, hook, hook$$.observers);
+      hook$$.complete()
+    });
 
     return hooksMap;
   }, linkInfo[hookProp] ?? ({} as DecoratedHooks<any>));
+
+  if (completionCallbacks.length) {
+    const originalOnDestroy = linkInfo.onDestroy;
+    linkInfo.onDestroy = function() {
+
+      originalOnDestroy?.call(this);
+      completionCallbacks.forEach(fn => fn());
+      // console.log(`calling originalOnDestroy`, originalOnDestroy);
+    }
+  }
+
 }
 
 export interface GetLifecycleHooksOptions {
   missingDecoratorError: Error;
+  incompatibleComponentError: Error;
 }
 
 /**
@@ -92,9 +116,13 @@ export interface GetLifecycleHooksOptions {
  */
 export function getLifecycleHooks<T extends DecorateHookOptions = {}>(
   target: any,
-  { missingDecoratorError }: GetLifecycleHooksOptions,
+  { incompatibleComponentError, missingDecoratorError }: GetLifecycleHooksOptions,
 ): DecoratedHooks<T> {
-  const hooks = getLinkInfo(target.constructor)[hookProp];
+  const linkInfo = getLinkInfo(target.constructor);
+  if (!linkInfo) {
+    throw incompatibleComponentError;
+  }
+  const hooks = linkInfo[hookProp];
 
   if (!hooks) {
     throw missingDecoratorError;
@@ -106,11 +134,20 @@ export function getLifecycleHooks<T extends DecorateHookOptions = {}>(
 export function getObservableLifecycle<T extends DecorateHookOptions = AllHookOptions>(target: any): DecoratedHooks<T> {
   return getLifecycleHooks(target, {
     missingDecoratorError: new Error(
-      'You must decorate the component or interface with @ObservableLifecycle for getObservableLifecycle to be able to function!',
+      'You must decorate the component or directive with @ObservableLifecycle for getObservableLifecycle to be able to function!',
+    ),
+    incompatibleComponentError: new Error(
+      `You must use getObservableLifecycle with a directive or component. This type (${target?.constructor.name}) is not compatible with getObservableLifecycle!`,
     ),
   });
 }
 
-export function ObservableLifecycle(options: DecorateHookOptions = allHooks): ClassDecorator {
-  return target => decorateObservableLifecycle(target, options);
+export function ObservableLifecycle(hooks: DecorateHookOptions = allHooks): ClassDecorator {
+  return target =>
+    decorateObservableLifecycle(target, {
+      hooks,
+      incompatibleComponentError: new Error(
+        `You must decorate a component or directive. This type (${target?.name}) is not compatible with @ObservableLifecycle!`,
+      ),
+    });
 }
