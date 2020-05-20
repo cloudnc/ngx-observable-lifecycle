@@ -13,7 +13,6 @@ import {
 } from '@angular/core';
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { getObservableLifecycle, ObservableLifecycle } from './ngx-observable-lifecycle';
-import createSpyObj = jasmine.createSpyObj;
 
 describe('integration', () => {
   type ObserverSpy = {
@@ -147,7 +146,7 @@ describe('integration', () => {
     ngOnDestroySpy = jasmine.createSpy('ngOnDestroy');
     ngOnInitSpy = jasmine.createSpy('ngOnInit');
 
-    const observerSpy = (name: string) => createSpyObj(name, ['next', 'error', 'complete']);
+    const observerSpy = (name: string) => jasmine.createSpyObj(name, ['next', 'error', 'complete']);
 
     onChanges$Spy = observerSpy('onChanges$Spy');
     onInit$Spy = observerSpy('onInit$Spy');
@@ -204,5 +203,22 @@ describe('integration', () => {
     fixture.detectChanges();
     expect(ngOnInitSpy).toHaveBeenCalledTimes(2);
     expect(onInit$Spy.next).toHaveBeenCalledTimes(2);
+  });
+
+  it('should observe the destroy lifecycle', () => {
+    expect(onDestroy$Spy.next).not.toHaveBeenCalled();
+    expect(ngOnDestroySpy).not.toHaveBeenCalled();
+    component.setTestComponentVisible(true);
+    fixture.detectChanges();
+
+    expect(onDestroy$Spy.next).not.toHaveBeenCalled();
+    expect(ngOnDestroySpy).not.toHaveBeenCalled();
+
+    component.setTestComponentVisible(false);
+    fixture.detectChanges();
+
+    expect(onDestroy$Spy.next).toHaveBeenCalledTimes(1);
+    expect(onDestroy$Spy.complete).toHaveBeenCalledTimes(1);
+    expect(ngOnDestroySpy).toHaveBeenCalledTimes(1);
   });
 });

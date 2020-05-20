@@ -9,31 +9,6 @@ import { NG_COMPONENT_DEF, NG_DIRECTIVE_DEF } from './ivy-api';
 
 export const hookProp: unique symbol = Symbol('ngx-observable-lifecycle-hooks');
 export const hooksPatched: unique symbol = Symbol('ngx-observable-lifecycle-hooks-decorator');
-
-type Writeable<T> = { -readonly [P in keyof T]: T[P] };
-
-export type IvyDirective<T> = Writeable<DirectiveDef<T> | ComponentDef<T>>;
-export type DecoratedDirective<T, U> = IvyDirective<T> & { [hooksPatched]: HooksType<U, boolean> };
-
-function getLinkInfo<T, U>(type: DirectiveType<T> | ComponentType<T>): DecoratedDirective<T, U> {
-  return (type as ComponentType<T>)[NG_COMPONENT_DEF] || (type as DirectiveType<T>)[NG_DIRECTIVE_DEF];
-}
-
-export type AngularLifecycleHook =
-  | 'onChanges'
-  | 'onInit'
-  | 'doCheck'
-  | 'afterContentInit'
-  | 'afterContentChecked'
-  | 'afterViewInit'
-  | 'afterViewChecked'
-  | 'onDestroy';
-
-type Hooks<T> = Pick<IvyDirective<T>, AngularLifecycleHook>;
-
-type AllHookOptions = Record<keyof Hooks<any>, true>;
-type DecorateHookOptions = Partial<AllHookOptions>;
-
 export const allHooks: AllHookOptions = {
   onChanges: true,
   onInit: true,
@@ -44,6 +19,30 @@ export const allHooks: AllHookOptions = {
   afterViewChecked: true,
   onDestroy: true,
 };
+
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export type IvyDirective<T> = Writeable<DirectiveDef<T> | ComponentDef<T>>;
+export type DecoratedDirective<T, U> = IvyDirective<T> & { [hooksPatched]?: HooksType<U, boolean> };
+
+function getLinkInfo<T, U>(type: DirectiveType<T> | ComponentType<T>): DecoratedDirective<T, U> {
+  return (type as ComponentType<T>)[NG_COMPONENT_DEF] || (type as DirectiveType<T>)[NG_DIRECTIVE_DEF];
+}
+
+export type LifecycleHookKey =
+  | 'onChanges'
+  | 'onInit'
+  | 'doCheck'
+  | 'afterContentInit'
+  | 'afterContentChecked'
+  | 'afterViewInit'
+  | 'afterViewChecked'
+  | 'onDestroy';
+
+type Hooks<T> = Pick<IvyDirective<T>, LifecycleHookKey>;
+
+type AllHookOptions = Record<keyof Hooks<any>, true>;
+type DecorateHookOptions = Partial<AllHookOptions>;
 
 export type HooksType<T extends DecorateHookOptions, U> = {
   [P in keyof T]: T[P] extends true ? U : never;
@@ -81,39 +80,41 @@ function closeHook<T>(classInstance: DecoratedClassInstance<T>, hook: keyof T): 
 /**
  * Library authors should use this to create their own decorators
  */
-export function decorateObservableLifecycle<T, U>(
-  target: T,
+export function decorateObservableLifecycle(
+  target: any,
   { hooks, incompatibleComponentError }: DecorateObservableOptions,
 ): void {
-  const linkInfo = getLinkInfo<T, U>(target as any);
+  const linkInfo = getLinkInfo(target as any);
 
   if (!linkInfo) {
     throw incompatibleComponentError;
   }
 
-  linkInfo[hooksPatched] = (Object.keys(hooks) as Array<keyof typeof hooks>).reduce((patched, hook) => {
-    // @ts-ignore
-    if (patched[hook]) {
+  linkInfo[hooksPatched] = (Object.keys(hooks) as Array<LifecycleHookKey>).reduce(
+    (patched: HooksType<any, boolean>, hook) => {
+      // do not re-patch hooks that have already been patched
+      if (patched[hook]) {
+        return patched;
+      }
+
+      const originalHook = linkInfo[hook];
+
+      linkInfo[hook] = function (this: DecoratedClassInstance<any>) {
+        originalHook?.call(this);
+        getSubjectForHook(this, hook).next();
+      };
+
+      const originalOnDestroy = linkInfo.onDestroy;
+      linkInfo.onDestroy = function (this: DecoratedClassInstance<any>) {
+        originalOnDestroy?.call(this);
+        closeHook(this, hook);
+      };
+
+      patched[hook] = true;
       return patched;
-    }
-
-    const originalHook = linkInfo[hook];
-
-    linkInfo[hook] = function (this: DecoratedClassInstance<any>) {
-      originalHook?.call(this);
-      getSubjectForHook(this, hook).next();
-    };
-
-    const originalOnDestroy = linkInfo.onDestroy;
-    linkInfo.onDestroy = function (this: DecoratedClassInstance<any>) {
-      originalOnDestroy?.call(this);
-      closeHook(this, hook);
-    };
-
-    // @ts-ignore
-    patched[hook] = true;
-    return patched;
-  }, linkInfo[hooksPatched] ?? ({} as any));
+    },
+    linkInfo[hooksPatched] ?? ({} as HooksType<any, boolean>),
+  );
 }
 
 export interface GetLifecycleHooksOptions {

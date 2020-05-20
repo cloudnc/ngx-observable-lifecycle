@@ -3,7 +3,7 @@ import { isObservable } from 'rxjs';
 import { NG_COMPONENT_DEF, NG_DIRECTIVE_DEF } from './ivy-api';
 import {
   allHooks,
-  AngularLifecycleHook,
+  LifecycleHookKey,
   DecoratedHooks,
   decorateObservableLifecycle,
   hooksPatched,
@@ -42,7 +42,7 @@ describe('ngx-observable-lifecycle', () => {
 
         const def = TestComponent[NG_COMPONENT_DEF];
 
-        hooks.forEach((hook: AngularLifecycleHook) => {
+        hooks.forEach((hook: LifecycleHookKey) => {
           expect(def[hook]).toBeDefined(`${hook} should be defined`);
         });
       });
@@ -58,7 +58,7 @@ describe('ngx-observable-lifecycle', () => {
 
         const def = TestDirective[NG_DIRECTIVE_DEF];
 
-        hooks.forEach((hook: AngularLifecycleHook) => {
+        hooks.forEach((hook: LifecycleHookKey) => {
           expect(def[hook]).toBeDefined(`${hook} should be defined`);
         });
       });
