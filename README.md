@@ -42,7 +42,7 @@ public timer$ = interval(500).pipe(automaticUnsubscribe(this));
 To build this lib, first we need to create a decorator that the implementing developers can add to their component.
 
 ```ts
-// ./src/app/lib-example/lib-example.ts#L1-L11
+// ./src/app/lib-example/lib-example.ts#L1-L14
 
 import { decorateObservableLifecycle, getLifecycleHooks } from 'ngx-observable-lifecycle';
 import { Observable } from 'rxjs';
@@ -51,7 +51,10 @@ import { takeUntil } from 'rxjs/operators';
 export function AutomaticUnsubscribe(): ClassDecorator {
   return function (target) {
     decorateObservableLifecycle(target, {
-      onDestroy: true,
+      hooks: {
+        onDestroy: true,
+      },
+      incompatibleComponentError: new Error(`You must use @AutomaticUnsubscribe with a directive or component.`),
     });
   };
 }
@@ -63,12 +66,18 @@ lifecycle hooks we want to observe (in this case, just `onDestroy`)
 Lastly to implement the rxjs operator itself, we do the following:
 
  ```ts
- // ./src/app/lib-example/lib-example.ts#L13-L20
+ // ./src/app/lib-example/lib-example.ts#L13-L26
+ 
+   };
+ }
  
  export function automaticUnsubscribe<T>(component): (source: Observable<T>) => Observable<T> {
    const { onDestroy } = getLifecycleHooks(component, {
      missingDecoratorError: new Error(
        'You must decorate the component or interface with @AutomaticUnsubscribe for automaticUnsubscribe to be able to function!',
+     ),
+     incompatibleComponentError: new Error(
+       `You must use automaticUnsubscribe with a directive or component. This type (${component?.constructor.name}) is not compatible with automaticUnsubscribe!`,
      ),
    });
    return (source: Observable<T>): Observable<T> => source.pipe(takeUntil(onDestroy));
