@@ -3,6 +3,7 @@
 [![npm version](https://badge.fury.io/js/ngx-observable-lifecycle.svg)](https://www.npmjs.com/package/ngx-observable-lifecycle)
 [![Build Status](https://travis-ci.org/cloudnc/ngx-observable-lifecycle.svg?branch=master)](https://travis-ci.org/cloudnc/ngx-observable-lifecycle)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](https://commitizen.github.io/cz-cli/)
+[![codecov](https://codecov.io/gh/cloudnc/ngx-observable-lifecycle/branch/master/graph/badge.svg)](https://codecov.io/gh/cloudnc/ngx-observable-lifecycle)
 [![License](https://img.shields.io/github/license/cloudnc/ngx-observable-lifecycle)](https://raw.githubusercontent.com/cloudnc/ngx-observable-lifecycle/master/LICENSE)
 ![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/@angular/core)
 ![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/rxjs)
