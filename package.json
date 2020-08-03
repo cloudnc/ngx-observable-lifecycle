@@ -1,0 +1,22 @@
+{
+  "name": "ngx-observable-lifecycle",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/core": "^9.1.7",
+    "tslib": "^1.10.0",
+    "rxjs": "~6.5.4"
+  },
+  "main": "bundles/ngx-observable-lifecycle.umd.js",
+  "module": "fesm5/ngx-observable-lifecycle.js",
+  "es2015": "fesm2015/ngx-observable-lifecycle.js",
+  "esm5": "esm5/ngx-observable-lifecycle.js",
+  "esm2015": "esm2015/ngx-observable-lifecycle.js",
+  "fesm5": "fesm5/ngx-observable-lifecycle.js",
+  "fesm2015": "fesm2015/ngx-observable-lifecycle.js",
+  "typings": "ngx-observable-lifecycle.d.ts",
+  "metadata": "ngx-observable-lifecycle.metadata.json",
+  "sideEffects": false,
+  "dependencies": {
+    "tslib": "^1.10.0"
+  }
+}
