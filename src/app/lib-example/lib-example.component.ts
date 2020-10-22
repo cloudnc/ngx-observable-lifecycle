@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { interval } from 'rxjs';
-import { automaticUnsubscribe, AutomaticUnsubscribe } from './lib-example';
+import { automaticUnsubscribe } from './lib-example';
 
-@AutomaticUnsubscribe()
 @Component({
   selector: 'app-lib-example',
   templateUrl: './lib-example.component.html',

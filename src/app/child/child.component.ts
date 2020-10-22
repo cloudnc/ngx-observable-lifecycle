@@ -1,10 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { getObservableLifecycle, ObservableLifecycle } from 'ngx-observable-lifecycle';
-import { take, takeUntil } from 'rxjs/operators';
-import { AutomaticUnsubscribe } from '../lib-example/lib-example';
+import { getObservableLifecycle } from 'ngx-observable-lifecycle';
 
-@AutomaticUnsubscribe()
-@ObservableLifecycle()
 @Component({
   selector: 'app-child',
   templateUrl: './child.component.html',
@@ -16,23 +12,23 @@ export class ChildComponent {
 
   constructor() {
     const {
-      onChanges,
-      onInit,
-      doCheck,
-      afterContentInit,
-      afterContentChecked,
-      afterViewInit,
-      afterViewChecked,
-      onDestroy,
+      ngOnChanges,
+      ngOnInit,
+      ngDoCheck,
+      ngAfterContentInit,
+      ngAfterContentChecked,
+      ngAfterViewInit,
+      ngAfterViewChecked,
+      ngOnDestroy,
     } = getObservableLifecycle(this);
 
-    onChanges.pipe(takeUntil(onDestroy)).subscribe(() => console.count('onChanges'));
-    onInit.pipe(takeUntil(onDestroy)).subscribe(() => console.count('onInit'));
-    doCheck.pipe(takeUntil(onDestroy)).subscribe(() => console.count('doCheck'));
-    afterContentInit.pipe(takeUntil(onDestroy)).subscribe(() => console.count('afterContentInit'));
-    afterContentChecked.pipe(takeUntil(onDestroy)).subscribe(() => console.count('afterContentChecked'));
-    afterViewInit.pipe(takeUntil(onDestroy)).subscribe(() => console.count('afterViewInit'));
-    afterViewChecked.pipe(takeUntil(onDestroy)).subscribe(() => console.count('afterViewChecked'));
-    onDestroy.pipe(take(1)).subscribe(() => console.count('onDestroy'));
+    ngOnChanges.subscribe(() => console.count('onChanges'));
+    ngOnInit.subscribe(() => console.count('onInit'));
+    ngDoCheck.subscribe(() => console.count('doCheck'));
+    ngAfterContentInit.subscribe(() => console.count('afterContentInit'));
+    ngAfterContentChecked.subscribe(() => console.count('afterContentChecked'));
+    ngAfterViewInit.subscribe(() => console.count('afterViewInit'));
+    ngAfterViewChecked.subscribe(() => console.count('afterViewChecked'));
+    ngOnDestroy.subscribe(() => console.count('onDestroy'));
   }
 }

@@ -3,3 +3,4 @@ dist
 node_modules
 .history
 README.md
+coverage
