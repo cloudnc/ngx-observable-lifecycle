@@ -11,8 +11,10 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-import { getObservableLifecycle, ObservableLifecycle } from './ngx-observable-lifecycle';
+import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { getObservableLifecycle } from 'ngx-observable-lifecycle';
+import { mapTo } from 'rxjs/operators';
 
 describe('integration', () => {
   type ObserverSpy = {
@@ -38,9 +40,9 @@ describe('integration', () => {
   let afterViewInit$Spy: ObserverSpy;
   let afterViewChecked$Spy: ObserverSpy;
   let onDestroy$Spy: ObserverSpy;
+  let componentInstanceId = 0;
 
   // tslint:disable:no-conflicting-lifecycle
-  @ObservableLifecycle()
   @Component({
     selector: 'lib-test-component',
     template: 'test-component',
@@ -56,6 +58,8 @@ describe('integration', () => {
       AfterViewChecked,
       AfterContentChecked,
       AfterContentInit {
+    public componentInstanceId = componentInstanceId++;
+
     public ngAfterContentChecked(): void {
       ngAfterContentCheckedSpy();
     }
@@ -90,24 +94,24 @@ describe('integration', () => {
 
     constructor() {
       const {
-        onChanges,
-        onInit,
-        doCheck,
-        afterContentInit,
-        afterContentChecked,
-        afterViewInit,
-        afterViewChecked,
-        onDestroy,
+        ngOnChanges,
+        ngOnInit,
+        ngDoCheck,
+        ngAfterContentInit,
+        ngAfterContentChecked,
+        ngAfterViewInit,
+        ngAfterViewChecked,
+        ngOnDestroy,
       } = getObservableLifecycle(this);
 
-      onChanges.subscribe(onChanges$Spy);
-      onInit.subscribe(onInit$Spy);
-      doCheck.subscribe(doCheck$Spy);
-      afterContentInit.subscribe(afterContentInit$Spy);
-      afterContentChecked.subscribe(afterContentChecked$Spy);
-      afterViewInit.subscribe(afterViewInit$Spy);
-      afterViewChecked.subscribe(afterViewChecked$Spy);
-      onDestroy.subscribe(onDestroy$Spy);
+      ngOnChanges.pipe(mapTo(this.componentInstanceId)).subscribe(onChanges$Spy);
+      ngOnInit.pipe(mapTo(this.componentInstanceId)).subscribe(onInit$Spy);
+      ngDoCheck.pipe(mapTo(this.componentInstanceId)).subscribe(doCheck$Spy);
+      ngAfterContentInit.pipe(mapTo(this.componentInstanceId)).subscribe(afterContentInit$Spy);
+      ngAfterContentChecked.pipe(mapTo(this.componentInstanceId)).subscribe(afterContentChecked$Spy);
+      ngAfterViewInit.pipe(mapTo(this.componentInstanceId)).subscribe(afterViewInit$Spy);
+      ngAfterViewChecked.pipe(mapTo(this.componentInstanceId)).subscribe(afterViewChecked$Spy);
+      ngOnDestroy.pipe(mapTo(this.componentInstanceId)).subscribe(onDestroy$Spy);
     }
   }
 
@@ -129,12 +133,14 @@ describe('integration', () => {
   let component: HostComponent;
   let fixture: ComponentFixture<HostComponent>;
 
-  beforeEach(async(() => {
-    TestBed.configureTestingModule({
-      imports: [CommonModule],
-      declarations: [HostComponent, TestComponent],
-    }).compileComponents();
-  }));
+  beforeEach(
+    waitForAsync(() => {
+      TestBed.configureTestingModule({
+        imports: [CommonModule],
+        declarations: [HostComponent, TestComponent],
+      }).compileComponents();
+    }),
+  );
 
   beforeEach(() => {
     ngAfterContentCheckedSpy = jasmine.createSpy('ngAfterContentChecked');
@@ -220,5 +226,22 @@ describe('integration', () => {
     expect(onDestroy$Spy.next).toHaveBeenCalledTimes(1);
     expect(onDestroy$Spy.complete).toHaveBeenCalledTimes(1);
     expect(ngOnDestroySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not emit on different instances of the same type being destroyed', () => {
+    const newInstance = new TestComponent();
+    component.setTestComponentVisible(true);
+    fixture.detectChanges();
+
+    expect(onDestroy$Spy.next).not.toHaveBeenCalled();
+    expect(ngOnDestroySpy).not.toHaveBeenCalled();
+
+    newInstance.ngOnDestroy();
+
+    expect(onDestroy$Spy.next).toHaveBeenCalledWith(newInstance.componentInstanceId);
+
+    const componentUnderTest = fixture.debugElement.query(By.directive(TestComponent)).componentInstance;
+
+    expect(onDestroy$Spy.next).not.toHaveBeenCalledWith(componentUnderTest.componentInstanceId);
   });
 });
