@@ -5,7 +5,7 @@
     "tslib": "^2.0.0"
   },
   "peerDependencies": {
-    "@angular/core": "^9.1.7",
+    "@angular/core": ">=9.1.7",
     "rxjs": "~6.5.4"
   }
 }
