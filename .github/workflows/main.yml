@@ -37,6 +37,9 @@ jobs:
         run: rm dist/ngx-observable-lifecycle/README.md && cp README.md dist/ngx-observable-lifecycle
       - name: Copy LICENSE into dist
         run: cp LICENSE dist/ngx-observable-lifecycle
+      - name: Rebuild for release
+        if: contains('refs/heads/master refs/heads/next', github.ref)
+        run: yarn lib:build:prod
       - name: Release
         if: contains('refs/heads/master refs/heads/next', github.ref)
         env:

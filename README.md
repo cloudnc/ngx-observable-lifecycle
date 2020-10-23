@@ -1,7 +1,7 @@
 # NgxObservableLifecycle
 
 [![npm version](https://badge.fury.io/js/ngx-observable-lifecycle.svg)](https://www.npmjs.com/package/ngx-observable-lifecycle)
-[![Build Status](https://github.com/cloudnc/ngx-observable-lifecycle/workflows/CI/badge.svg)](https://github.com/cloudnc/ngx-observable-lifecycle/workflows/actions)
+[![Build Status](https://github.com/cloudnc/ngx-observable-lifecycle/workflows/CI/badge.svg)](https://github.com/cloudnc/ngx-observable-lifecycle/actions)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](https://commitizen.github.io/cz-cli/)
 [![codecov](https://codecov.io/gh/cloudnc/ngx-observable-lifecycle/branch/master/graph/badge.svg)](https://codecov.io/gh/cloudnc/ngx-observable-lifecycle)
 [![License](https://img.shields.io/github/license/cloudnc/ngx-observable-lifecycle)](https://raw.githubusercontent.com/cloudnc/ngx-observable-lifecycle/master/LICENSE)
