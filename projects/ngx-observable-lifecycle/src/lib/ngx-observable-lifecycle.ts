@@ -53,14 +53,14 @@ function getSubjectForHook(componentInstance: ComponentInstance, hook: Lifecycle
 
     proto[hook] = function (this: ComponentInstance) {
       (originalHook as () => void)?.call(this);
-      this[hookSubject][hook]?.next();
+      this[hookSubject]?.[hook]?.next();
     };
 
     const originalOnDestroy = proto.ngOnDestroy;
     proto.ngOnDestroy = function (this: ComponentInstance) {
       originalOnDestroy?.call(this);
-      this[hookSubject][hook]?.complete();
-      delete this[hookSubject][hook];
+      this[hookSubject]?.[hook]?.complete();
+      delete this[hookSubject]?.[hook];
     };
 
     proto[hooksPatched][hook] = true;
