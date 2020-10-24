@@ -32,7 +32,9 @@ jobs:
       - name: Test
         run: yarn lib:test:ci
       - name: Coverage
-        run: yarn codecov
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: true # optional (default = false)
       - name: Rebuild for release
         if: contains('refs/heads/master refs/heads/next', github.ref)
         run: |

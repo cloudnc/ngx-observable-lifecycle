@@ -29,12 +29,16 @@ type DecorateHookOptions = Partial<AllHookOptions>;
 export type DecoratedHooks = Record<LifecycleHookKey, Observable<void>>;
 export type DecoratedHooksSub = Record<LifecycleHookKey, Subject<void>>;
 
-type ComponentInstance = Partial<AllHooks> & {
-  [hookSubject]: Partial<DecoratedHooksSub>;
-  [hooksPatched]: Partial<DecorateHookOptions>;
+type PatchedComponentInstance<K extends LifecycleHookKey> = Pick<AllHooks, K> & {
+  [hookSubject]: Pick<DecoratedHooksSub, K>;
+  constructor: {
+    prototype: {
+      [hooksPatched]: Pick<DecorateHookOptions, K>;
+    };
+  };
 };
 
-function getSubjectForHook(componentInstance: ComponentInstance, hook: LifecycleHookKey): Subject<void> {
+function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hook: LifecycleHookKey): Subject<void> {
   if (!componentInstance[hookSubject]) {
     componentInstance[hookSubject] = {};
   }
@@ -51,13 +55,13 @@ function getSubjectForHook(componentInstance: ComponentInstance, hook: Lifecycle
   if (!proto[hooksPatched][hook]) {
     const originalHook = proto[hook];
 
-    proto[hook] = function (this: ComponentInstance) {
+    proto[hook] = function (this: PatchedComponentInstance<typeof hook>) {
       (originalHook as () => void)?.call(this);
-      this[hookSubject]?.[hook]?.next();
+      this[hookSubject][hook].next();
     };
 
     const originalOnDestroy = proto.ngOnDestroy;
-    proto.ngOnDestroy = function (this: ComponentInstance) {
+    proto.ngOnDestroy = function (this: PatchedComponentInstance<typeof hook>) {
       originalOnDestroy?.call(this);
       this[hookSubject]?.[hook]?.complete();
       delete this[hookSubject]?.[hook];
