@@ -57,7 +57,7 @@ function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hoo
 
     proto[hook] = function (this: PatchedComponentInstance<typeof hook>) {
       (originalHook as () => void)?.call(this);
-      this[hookSubject][hook].next();
+      this[hookSubject]?.[hook]?.next();
     };
 
     const originalOnDestroy = proto.ngOnDestroy;

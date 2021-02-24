@@ -84,5 +84,27 @@ describe('ngx-observable-lifecycle', () => {
 
       (instance as OnDestroy).ngOnDestroy();
     });
+
+    it('should not throw if onDestroy was invoked on difference instances', () => {
+      const originalOnDestroySpy = jasmine.createSpy();
+
+      class TestClass implements OnDestroy {
+        public ngOnDestroy(): void {
+          originalOnDestroySpy();
+        }
+      }
+
+      const instance = new TestClass();
+      const instance2 = new TestClass();
+
+      const { ngOnDestroy } = getObservableLifecycle(instance);
+
+      expect(originalOnDestroySpy).not.toHaveBeenCalled();
+
+      instance.ngOnDestroy();
+      instance2.ngOnDestroy();
+
+      expect(originalOnDestroySpy).toHaveBeenCalled();
+    });
   });
 });
