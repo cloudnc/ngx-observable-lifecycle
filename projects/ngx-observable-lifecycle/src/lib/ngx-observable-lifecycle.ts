@@ -70,7 +70,7 @@ function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hoo
     proto[hooksPatched][hook] = true;
   }
 
-  // tslint:disable-next-line:no-non-null-assertion - this is definitely defined above
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return componentInstance[hookSubject][hook]!;
 }
 

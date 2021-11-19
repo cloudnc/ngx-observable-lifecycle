@@ -1,13 +1,9 @@
 <app-child *ngIf="showChildComponent" [input]="inputValue"></app-child>
 <hr />
 <button (click)="inputValue = inputValue + 1">Increment inputValue</button>
-<button (click)="showChildComponent = !showChildComponent">
-  Toggle child component
-</button>
+<button (click)="showChildComponent = !showChildComponent">Toggle child component</button>
 <hr />
 <app-lib-example *ngIf="showLibExampleComponent"></app-lib-example>
-<button (click)="showLibExampleComponent = !showLibExampleComponent">
-  Toggle lib example component
-</button>
+<button (click)="showLibExampleComponent = !showLibExampleComponent">Toggle lib example component</button>
 
 <em>Open the devtools console to see the lifecycle logged for each component</em>
