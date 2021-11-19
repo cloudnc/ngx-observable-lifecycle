@@ -119,9 +119,21 @@
             "tsConfig": "projects/ngx-observable-lifecycle/tsconfig.spec.json",
             "karmaConfig": "projects/ngx-observable-lifecycle/karma.conf.js"
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/ngx-observable-lifecycle/**/*.ts",
+              "projects/ngx-observable-lifecycle/**/*.html"
+            ]
+          }
         }
       }
     }
   },
-  "defaultProject": "ngx-observable-lifecycle-app"
+  "defaultProject": "ngx-observable-lifecycle-app",
+  "cli": {
+    "defaultCollection": "@angular-eslint/schematics"
+  }
 }

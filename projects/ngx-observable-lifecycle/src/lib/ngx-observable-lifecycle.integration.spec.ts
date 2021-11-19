@@ -42,7 +42,7 @@ describe('integration', () => {
   let onDestroy$Spy: ObserverSpy;
   let componentInstanceId = 0;
 
-  // tslint:disable:no-conflicting-lifecycle
+  /* eslint-disable @angular-eslint/no-conflicting-lifecycle */
   @Component({
     selector: 'lib-test-component',
     template: 'test-component',
@@ -57,7 +57,8 @@ describe('integration', () => {
       AfterViewInit,
       AfterViewChecked,
       AfterContentChecked,
-      AfterContentInit {
+      AfterContentInit
+  {
     public componentInstanceId = componentInstanceId++;
 
     public ngAfterContentChecked(): void {
