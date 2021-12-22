@@ -8,8 +8,6 @@
 ![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/@angular/core)
 ![npm peer dependency version](https://img.shields.io/npm/dependency-version/ngx-observable-lifecycle/peer/rxjs)
 
-[![NPM](https://nodei.co/npm/ngx-observable-lifecycle.png?compact=true)](https://nodei.co/npm/ngx-observable-lifecycle/)
-
 
 ## Features
 
