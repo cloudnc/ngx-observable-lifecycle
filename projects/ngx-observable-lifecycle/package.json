@@ -6,6 +6,6 @@
   },
   "peerDependencies": {
     "@angular/core": ">=9.1.7",
-    "rxjs": "~6.5.4"
+    "rxjs": "^6.5.4 || ^7.4.0"
   }
 }
