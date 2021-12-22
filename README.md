@@ -29,7 +29,7 @@ Let's say we're building a simple library function that automatically unsubscrib
 subscribed to within a component. We'll implement this as an RxJS operator that can be used as follows:
 
 ```ts
-// ./src/app/lib-example/lib-example.component.ts#L12-L12
+// ./src/app/lib-example/lib-example.component.ts#L11-L11
 
 public timer$ = interval(500).pipe(automaticUnsubscribe(this));
 ````
@@ -65,7 +65,6 @@ import { automaticUnsubscribe } from './lib-example';
 @Component({
   selector: 'app-lib-example',
   templateUrl: './lib-example.component.html',
-  styleUrls: ['./lib-example.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LibExampleComponent {
@@ -94,7 +93,6 @@ import { getObservableLifecycle } from 'ngx-observable-lifecycle';
 @Component({
   selector: 'app-child',
   templateUrl: './child.component.html',
-  styleUrls: ['./child.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChildComponent {

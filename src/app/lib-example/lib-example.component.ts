@@ -5,7 +5,6 @@ import { automaticUnsubscribe } from './lib-example';
 @Component({
   selector: 'app-lib-example',
   templateUrl: './lib-example.component.html',
-  styleUrls: ['./lib-example.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LibExampleComponent {
