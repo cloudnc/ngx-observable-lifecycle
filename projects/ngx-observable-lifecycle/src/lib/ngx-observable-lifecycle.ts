@@ -26,8 +26,13 @@ export type LifecycleHookKey = keyof AllHooks;
 type AllHookOptions = Record<LifecycleHookKey, true>;
 type DecorateHookOptions = Partial<AllHookOptions>;
 
-export type DecoratedHooks = Record<LifecycleHookKey, Observable<void>>;
-export type DecoratedHooksSub = Record<LifecycleHookKey, Subject<void>>;
+// none of the hooks have arguments, EXCEPT ngOnChanges which we need to handle differently
+export type DecoratedHooks = Record<Exclude<LifecycleHookKey, 'ngOnChanges'>, Observable<void>> & {
+  ngOnChanges: Observable<Parameters<OnChanges['ngOnChanges']>[0]>;
+};
+export type DecoratedHooksSub = {
+  [k in keyof DecoratedHooks]: DecoratedHooks[k] extends Observable<infer U> ? Subject<U> : never;
+};
 
 type PatchedComponentInstance<K extends LifecycleHookKey> = Pick<AllHooks, K> & {
   [hookSubject]: Pick<DecoratedHooksSub, K>;
@@ -55,9 +60,14 @@ function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hoo
   if (!proto[hooksPatched][hook]) {
     const originalHook = proto[hook];
 
-    proto[hook] = function (this: PatchedComponentInstance<typeof hook>) {
-      (originalHook as () => void)?.call(this);
-      this[hookSubject]?.[hook]?.next();
+    proto[hook] = function (...args: any[]) {
+      originalHook?.call(this, ...args);
+
+      if (hook === 'ngOnChanges') {
+        this[hookSubject]?.[hook]?.next(args[0]);
+      } else {
+        this[hookSubject]?.[hook]?.next();
+      }
     };
 
     const originalOnDestroy = proto.ngOnDestroy;
