@@ -7,14 +7,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   DoCheck,
+  Input,
   OnChanges,
   OnDestroy,
   OnInit,
+  SimpleChange,
+  SimpleChanges,
 } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { getObservableLifecycle } from 'ngx-observable-lifecycle';
-import { mapTo } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 describe('integration', () => {
   type ObserverSpy = {
@@ -59,6 +62,8 @@ describe('integration', () => {
       AfterContentChecked,
       AfterContentInit
   {
+    @Input() input: any;
+
     public componentInstanceId = componentInstanceId++;
 
     public ngAfterContentChecked(): void {
@@ -81,8 +86,8 @@ describe('integration', () => {
       ngDoCheckSpy();
     }
 
-    public ngOnChanges(): void {
-      ngOnChangesSpy();
+    public ngOnChanges(simpleChanges: SimpleChanges): void {
+      ngOnChangesSpy(simpleChanges);
     }
 
     public ngOnDestroy(): void {
@@ -105,14 +110,16 @@ describe('integration', () => {
         ngOnDestroy,
       } = getObservableLifecycle(this);
 
-      ngOnChanges.pipe(mapTo(this.componentInstanceId)).subscribe(onChanges$Spy);
-      ngOnInit.pipe(mapTo(this.componentInstanceId)).subscribe(onInit$Spy);
-      ngDoCheck.pipe(mapTo(this.componentInstanceId)).subscribe(doCheck$Spy);
-      ngAfterContentInit.pipe(mapTo(this.componentInstanceId)).subscribe(afterContentInit$Spy);
-      ngAfterContentChecked.pipe(mapTo(this.componentInstanceId)).subscribe(afterContentChecked$Spy);
-      ngAfterViewInit.pipe(mapTo(this.componentInstanceId)).subscribe(afterViewInit$Spy);
-      ngAfterViewChecked.pipe(mapTo(this.componentInstanceId)).subscribe(afterViewChecked$Spy);
-      ngOnDestroy.pipe(mapTo(this.componentInstanceId)).subscribe(onDestroy$Spy);
+      const instanceId = this.componentInstanceId;
+
+      ngOnChanges.pipe(map(value => ({ instanceId, value }))).subscribe(onChanges$Spy);
+      ngOnInit.pipe(map(() => ({ instanceId }))).subscribe(onInit$Spy);
+      ngDoCheck.pipe(map(() => ({ instanceId }))).subscribe(doCheck$Spy);
+      ngAfterContentInit.pipe(map(() => ({ instanceId }))).subscribe(afterContentInit$Spy);
+      ngAfterContentChecked.pipe(map(() => ({ instanceId }))).subscribe(afterContentChecked$Spy);
+      ngAfterViewInit.pipe(map(() => ({ instanceId }))).subscribe(afterViewInit$Spy);
+      ngAfterViewChecked.pipe(map(() => ({ instanceId }))).subscribe(afterViewChecked$Spy);
+      ngOnDestroy.pipe(map(() => ({ instanceId }))).subscribe(onDestroy$Spy);
     }
   }
 
@@ -131,14 +138,37 @@ describe('integration', () => {
     }
   }
 
+  @Component({
+    selector: 'lib-host-with-input-component',
+    template: `
+      <h1>Host with input Component</h1>
+      <lib-test-component *ngIf="testComponentVisible" [input]="inputValue"></lib-test-component>
+    `,
+  })
+  class HostWithInputComponent {
+    public testComponentVisible = false;
+
+    public inputValue = undefined;
+
+    public setTestComponentVisible(visible: boolean) {
+      this.testComponentVisible = visible;
+    }
+
+    public setInputValue(value: any) {
+      this.inputValue = value;
+    }
+  }
+
   let component: HostComponent;
+  let componentWithInput: HostWithInputComponent;
   let fixture: ComponentFixture<HostComponent>;
+  let fixtureWithInput: ComponentFixture<HostWithInputComponent>;
 
   beforeEach(
     waitForAsync(() => {
       TestBed.configureTestingModule({
         imports: [CommonModule],
-        declarations: [HostComponent, TestComponent],
+        declarations: [HostComponent, HostWithInputComponent, TestComponent],
       }).compileComponents();
     }),
   );
@@ -167,6 +197,10 @@ describe('integration', () => {
     fixture = TestBed.createComponent(HostComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+
+    fixtureWithInput = TestBed.createComponent(HostWithInputComponent);
+    componentWithInput = fixtureWithInput.componentInstance;
+    fixtureWithInput.detectChanges();
   });
 
   it('should be created', () => {
@@ -239,10 +273,42 @@ describe('integration', () => {
 
     newInstance.ngOnDestroy();
 
-    expect(onDestroy$Spy.next).toHaveBeenCalledWith(newInstance.componentInstanceId);
+    expect(onDestroy$Spy.next).toHaveBeenCalledWith({ instanceId: newInstance.componentInstanceId });
 
     const componentUnderTest = fixture.debugElement.query(By.directive(TestComponent)).componentInstance;
 
-    expect(onDestroy$Spy.next).not.toHaveBeenCalledWith(componentUnderTest.componentInstanceId);
+    expect(onDestroy$Spy.next).not.toHaveBeenCalledWith({ instanceId: componentUnderTest.componentInstanceId });
+  });
+
+  it('should still receive the SimpleChanges object in the ngOnChanges original hook and provide the SimpleChanges into the stream as well', () => {
+    expect(onChanges$Spy.next).not.toHaveBeenCalled();
+    expect(ngOnChangesSpy).not.toHaveBeenCalled();
+    componentWithInput.setTestComponentVisible(true);
+    fixtureWithInput.detectChanges();
+
+    expect(onChanges$Spy.next).toHaveBeenCalledOnceWith({
+      instanceId: jasmine.anything(),
+      value: {
+        input: new SimpleChange(undefined, undefined, true),
+      },
+    });
+    expect(ngOnChangesSpy).toHaveBeenCalledOnceWith({
+      input: new SimpleChange(undefined, undefined, true),
+    });
+
+    componentWithInput.setInputValue('New value');
+    fixtureWithInput.detectChanges();
+
+    expect(onChanges$Spy.next).toHaveBeenCalledTimes(2);
+    expect(onChanges$Spy.next).toHaveBeenCalledWith({
+      instanceId: jasmine.anything(),
+      value: {
+        input: new SimpleChange(undefined, 'New value', false),
+      },
+    });
+    expect(ngOnChangesSpy).toHaveBeenCalledTimes(2);
+    expect(ngOnChangesSpy).toHaveBeenCalledWith({
+      input: new SimpleChange(undefined, 'New value', false),
+    });
   });
 });
