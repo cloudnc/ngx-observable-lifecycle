@@ -7,7 +7,7 @@ import { getObservableLifecycle } from 'ngx-observable-lifecycle';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChildComponent {
-  @Input() input: number;
+  @Input() input: number | undefined | null;
 
   constructor() {
     const {
