@@ -26,24 +26,55 @@ export type LifecycleHookKey = keyof AllHooks;
 type AllHookOptions = Record<LifecycleHookKey, true>;
 type DecorateHookOptions = Partial<AllHookOptions>;
 
-// none of the hooks have arguments, EXCEPT ngOnChanges which we need to handle differently
-export type DecoratedHooks = Record<Exclude<LifecycleHookKey, 'ngOnChanges'>, Observable<void>> & {
-  ngOnChanges: Observable<Parameters<OnChanges['ngOnChanges']>[0]>;
-};
-export type DecoratedHooksSub = {
-  [k in keyof DecoratedHooks]: DecoratedHooks[k] extends Observable<infer U> ? Subject<U> : never;
+export interface TypedSimpleChange<Data> {
+  previousValue: Data;
+  currentValue: Data;
+  firstChange: boolean;
+}
+
+/**
+ * FIRST POINT:
+ * the key is made optional because an ngOnChanges will only give keys of inputs that have changed
+ * SECOND POINT:
+ * the value is associated with `| null` as if an input value is defined but actually retrieved with
+ * an `async` pipe, we'll initially get a `null` value
+ *
+ * For both point, feel free to check the following stackblitz that demo this
+ * https://stackblitz.com/edit/stackblitz-starters-s5uphw?file=src%2Fmain.ts
+ */
+export type TypedSimpleChanges<Component, Keys extends keyof Component> = {
+  [Key in Keys]?: TypedSimpleChange<Component[Key]> | null;
 };
 
-type PatchedComponentInstance<K extends LifecycleHookKey> = Pick<AllHooks, K> & {
-  [hookSubject]: Pick<DecoratedHooksSub, K>;
+// none of the hooks have arguments, EXCEPT ngOnChanges which we need to handle differently
+export type DecoratedHooks<Component, Keys extends keyof Component> = Record<
+  Exclude<LifecycleHookKey, 'ngOnChanges'>,
+  Observable<void>
+> & {
+  ngOnChanges: Observable<TypedSimpleChanges<Component, Keys>>;
+};
+export type DecoratedHooksSub<Component, Keys extends keyof Component> = {
+  [k in keyof DecoratedHooks<Component, Keys>]: DecoratedHooks<Component, Keys>[k] extends Observable<infer U>
+    ? Subject<U>
+    : never;
+};
+
+type PatchedComponentInstance<Component, Keys extends keyof Component, Hooks extends LifecycleHookKey = any> = Pick<
+  AllHooks,
+  Hooks
+> & {
+  [hookSubject]: Pick<DecoratedHooksSub<Component, Keys>, Hooks>;
   constructor: {
     prototype: {
-      [hooksPatched]: Pick<DecorateHookOptions, K>;
+      [hooksPatched]: Pick<DecorateHookOptions, Hooks>;
     };
   };
 };
 
-function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hook: LifecycleHookKey): Subject<void> {
+function getSubjectForHook<Component, Keys extends keyof Component>(
+  componentInstance: PatchedComponentInstance<Component, Keys>,
+  hook: LifecycleHookKey,
+): Subject<void> {
   if (!componentInstance[hookSubject]) {
     componentInstance[hookSubject] = {};
   }
@@ -71,7 +102,7 @@ function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hoo
     };
 
     const originalOnDestroy = proto.ngOnDestroy;
-    proto.ngOnDestroy = function (this: PatchedComponentInstance<typeof hook>) {
+    proto.ngOnDestroy = function (this: PatchedComponentInstance<Component, Keys, typeof hook>) {
       originalOnDestroy?.call(this);
       this[hookSubject]?.[hook]?.complete();
       delete this[hookSubject]?.[hook];
@@ -87,10 +118,12 @@ function getSubjectForHook(componentInstance: PatchedComponentInstance<any>, hoo
 /**
  * Library authors should use this to create their own lifecycle-aware functionality
  */
-export function getObservableLifecycle(classInstance: any): DecoratedHooks {
-  return new Proxy({} as DecoratedHooks, {
-    get(target: DecoratedHooks, p: LifecycleHookKey): Observable<void> {
-      return getSubjectForHook(classInstance, p).asObservable();
+export function getObservableLifecycle<Component, Inputs extends keyof Component = never>(
+  classInstance: Component,
+): DecoratedHooks<Component, Inputs> {
+  return new Proxy({} as DecoratedHooks<Component, Inputs>, {
+    get(target: DecoratedHooks<Component, Inputs>, p: LifecycleHookKey): Observable<void> {
+      return getSubjectForHook(classInstance as unknown as PatchedComponentInstance<any, any>, p).asObservable();
     },
   });
 }
