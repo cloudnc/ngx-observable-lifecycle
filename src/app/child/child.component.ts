@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { getObservableLifecycle } from 'ngx-observable-lifecycle';
-import { Nilable } from 'tsdef';
 
 @Component({
   selector: 'app-child',
@@ -8,7 +7,7 @@ import { Nilable } from 'tsdef';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChildComponent {
-  @Input() input: Nilable<number>;
+  @Input() input: number | undefined | null;
 
   constructor() {
     const {
