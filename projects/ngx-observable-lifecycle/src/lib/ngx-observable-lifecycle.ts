@@ -47,23 +47,18 @@ export type TypedSimpleChanges<Component, Keys extends keyof Component> = {
 };
 
 // none of the hooks have arguments, EXCEPT ngOnChanges which we need to handle differently
-export type DecoratedHooks<Component, Keys extends keyof Component> = Record<
+export type DecoratedHooks<Component = any, Keys extends keyof Component = any> = Record<
   Exclude<LifecycleHookKey, 'ngOnChanges'>,
   Observable<void>
 > & {
   ngOnChanges: Observable<TypedSimpleChanges<Component, Keys>>;
 };
-export type DecoratedHooksSub<Component, Keys extends keyof Component> = {
-  [k in keyof DecoratedHooks<Component, Keys>]: DecoratedHooks<Component, Keys>[k] extends Observable<infer U>
-    ? Subject<U>
-    : never;
+export type DecoratedHooksSub = {
+  [k in keyof DecoratedHooks]: DecoratedHooks[k] extends Observable<infer U> ? Subject<U> : never;
 };
 
-type PatchedComponentInstance<Component, Keys extends keyof Component, Hooks extends LifecycleHookKey = any> = Pick<
-  AllHooks,
-  Hooks
-> & {
-  [hookSubject]: Pick<DecoratedHooksSub<Component, Keys>, Hooks>;
+type PatchedComponentInstance<Hooks extends LifecycleHookKey = any> = Pick<AllHooks, Hooks> & {
+  [hookSubject]: Pick<DecoratedHooksSub, Hooks>;
   constructor: {
     prototype: {
       [hooksPatched]: Pick<DecorateHookOptions, Hooks>;
@@ -71,10 +66,7 @@ type PatchedComponentInstance<Component, Keys extends keyof Component, Hooks ext
   };
 };
 
-function getSubjectForHook<Component, Keys extends keyof Component>(
-  componentInstance: PatchedComponentInstance<Component, Keys>,
-  hook: LifecycleHookKey,
-): Subject<void> {
+function getSubjectForHook(componentInstance: PatchedComponentInstance, hook: LifecycleHookKey): Subject<void> {
   if (!componentInstance[hookSubject]) {
     componentInstance[hookSubject] = {};
   }
@@ -102,7 +94,7 @@ function getSubjectForHook<Component, Keys extends keyof Component>(
     };
 
     const originalOnDestroy = proto.ngOnDestroy;
-    proto.ngOnDestroy = function (this: PatchedComponentInstance<Component, Keys, typeof hook>) {
+    proto.ngOnDestroy = function (this: PatchedComponentInstance<typeof hook>) {
       originalOnDestroy?.call(this);
       this[hookSubject]?.[hook]?.complete();
       delete this[hookSubject]?.[hook];
@@ -123,7 +115,7 @@ export function getObservableLifecycle<Component, Inputs extends keyof Component
 ): DecoratedHooks<Component, Inputs> {
   return new Proxy({} as DecoratedHooks<Component, Inputs>, {
     get(target: DecoratedHooks<Component, Inputs>, p: LifecycleHookKey): Observable<void> {
-      return getSubjectForHook(classInstance as unknown as PatchedComponentInstance<any, any>, p).asObservable();
+      return getSubjectForHook(classInstance as unknown as PatchedComponentInstance, p).asObservable();
     },
   });
 }
