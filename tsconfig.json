@@ -14,10 +14,7 @@
     "target": "es2015",
     "lib": ["es2018", "dom"],
     "paths": {
-      "ngx-observable-lifecycle": [
-        "dist/ngx-observable-lifecycle/ngx-observable-lifecycle",
-        "dist/ngx-observable-lifecycle"
-      ]
+      "ngx-observable-lifecycle": ["projects/ngx-observable-lifecycle/src/public-api"]
     }
   },
   "angularCompilerOptions": {
