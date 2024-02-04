@@ -67,6 +67,12 @@ type PatchedComponentInstance<Hooks extends LifecycleHookKey = any> = Pick<AllHo
 };
 
 function getSubjectForHook(componentInstance: PatchedComponentInstance, hook: LifecycleHookKey): Subject<void> {
+  if (hook === 'ngOnChanges' && !componentInstance.constructor.prototype[hook]) {
+    throw new Error(
+      `When using the ngOnChanges hook, you have to define the hook in your class even if it's empty. See https://stackoverflow.com/a/77930589/2398593`,
+    );
+  }
+
   if (!componentInstance[hookSubject]) {
     componentInstance[hookSubject] = {};
   }
