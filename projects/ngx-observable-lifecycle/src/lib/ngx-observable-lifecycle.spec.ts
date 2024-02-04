@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { isObservable } from 'rxjs';
 import { getObservableLifecycle } from './ngx-observable-lifecycle';
 
@@ -105,6 +105,47 @@ describe('ngx-observable-lifecycle', () => {
       instance2.ngOnDestroy();
 
       expect(originalOnDestroySpy).toHaveBeenCalled();
+    });
+
+    // see https://stackoverflow.com/a/77930589/2398593
+    it(`should throw if ngOnChanges isn't defined in the component if ngOnChanges observable is used`, () => {
+      class LocalTestComponent {
+        constructor() {
+          // all except ngOnChanges
+          // even without having the original `ngOnChanges` hook it should be ok
+          const {
+            ngOnInit,
+            ngDoCheck,
+            ngAfterContentInit,
+            ngAfterContentChecked,
+            ngAfterViewInit,
+            ngAfterViewChecked,
+            ngOnDestroy,
+          } = getObservableLifecycle(this);
+        }
+      }
+
+      expect(() => new LocalTestComponent()).not.toThrowError();
+
+      class LocalTestWithNgOnChangesNoOriginalHookComponent {
+        constructor() {
+          // without having the original `ngOnChanges` hook it should throw
+          const { ngOnChanges } = getObservableLifecycle(this);
+        }
+      }
+      expect(() => new LocalTestWithNgOnChangesNoOriginalHookComponent()).toThrowError(
+        `When using the ngOnChanges hook, you have to define the hook in your class even if it's empty. See https://stackoverflow.com/a/77930589/2398593`,
+      );
+
+      class LocalTestWithNgOnChangesAndOriginalHookComponent implements OnChanges {
+        constructor() {
+          // when we have the original `ngOnChanges` hook it should **not** throw
+          const { ngOnChanges } = getObservableLifecycle(this);
+        }
+
+        public ngOnChanges(): void {}
+      }
+      expect(() => new LocalTestWithNgOnChangesAndOriginalHookComponent()).not.toThrowError();
     });
   });
 });

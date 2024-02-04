@@ -85,7 +85,7 @@ Here's an example component that hooks onto the full set of available hooks.
 ```ts
 // ./src/app/child/child.component.ts
 
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/core';
 import { getObservableLifecycle } from 'ngx-observable-lifecycle';
 
 @Component({
@@ -93,7 +93,7 @@ import { getObservableLifecycle } from 'ngx-observable-lifecycle';
   templateUrl: './child.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ChildComponent {
+export class ChildComponent implements OnChanges {
   @Input() input1: number | undefined | null;
   @Input() input2: string | undefined | null;
 
@@ -134,6 +134,11 @@ export class ChildComponent {
       changes.input2?.previousValue; // `string | null | undefined`
     });
   }
+
+  // when using the ngOnChanges hook, you have to define the hook in your class even if it's empty
+  // See https://stackoverflow.com/a/77930589/2398593 for more info
+  // eslint-disable-next-line @angular-eslint/no-empty-lifecycle-method
+  public ngOnChanges() {}
 }
 
 ```
